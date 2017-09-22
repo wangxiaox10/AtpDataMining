@@ -8,6 +8,12 @@ namespace atpDataMining
         {
             var c = new Parser();
             var playersInfo = c.Parse();
+            foreach (var player in playersInfo)
+            {
+                c.ParsePlayer(player);
+            }
+
+
             var json = JsonConvert.SerializeObject(playersInfo);
 
             var file = new System.IO.StreamWriter("test.txt");
