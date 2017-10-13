@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Net.Http;
-using System.Threading.Tasks;
 using HtmlAgilityPack;
 using System;
 using static System.Int32;
@@ -11,21 +10,31 @@ namespace atpDataMining
     {
         private readonly static string baseUrl = $"http://www.atpworldtour.com/";
         private readonly static string url = $"http://www.atpworldtour.com/en/rankings/singles";
+        private readonly static string folder = "playersPage";
+
         public List<Player> Parse()
         {
             var web = new HtmlWeb();
             var doc = web.Load(url);
 
+            if (!System.IO.Directory.Exists(folder))
+            {
+                System.IO.Directory.CreateDirectory(folder);
+            }
+
             var playerList = new List<Player>();
             var links = doc.DocumentNode.SelectNodes("//td[@class='player-cell']");//the parameter is use xpath see: https://www.w3schools.com/xml/xml_xpath.asp 
 
+            //download pages to local
+
+            var rank = 1;
             foreach (var data in links)
             {
                 var link = data.ChildNodes[1].Attributes[0].Value;
-
                 var absolutUrl = new Uri(new Uri(baseUrl), link).ToString();
                 var player = new Player
                 {
+                    Rank = rank++,
                     Name = data.InnerText.Trim('\t').Trim('\r').Trim('\n'),
                     Link = absolutUrl
                 };
@@ -36,11 +45,23 @@ namespace atpDataMining
 
         public Player ParsePlayer(Player player)
         {
-            Console.WriteLine(player.Name);
-            HttpClient hc = new HttpClient();
+            Console.WriteLine(player.Rank + " " + player.Name);
             var playerUrl = player.Link;
-            var web = new HtmlWeb();
-            var doc = web.Load(playerUrl);
+            HtmlDocument doc = null;
+            var downloadedFilePath = $"{folder}/{player.Name}";
+            if (System.IO.File.Exists(downloadedFilePath))
+            {
+                var content = System.IO.File.ReadAllText(downloadedFilePath);
+                doc = new HtmlDocument();
+                doc.LoadHtml(content);
+            }
+            else
+            {
+                HttpClient hc = new HttpClient();
+                var web = new HtmlWeb();
+                doc = web.Load(playerUrl);
+                doc.Save(downloadedFilePath);
+            }
 
             //Birthday 
             var birthdayNode = doc.DocumentNode.SelectSingleNode("//span[@class='table-birthday']");
@@ -82,6 +103,32 @@ namespace atpDataMining
             if (TryParse(turnedProYearStr, out year))
             {
                 player.TurnedPro = year;
+            }
+
+            //Residence 
+            var residenceNode = doc.DocumentNode.SelectSingleNode("//div[text() = 'Residence']").ParentNode.ChildNodes[3];
+            var residence = residenceNode.InnerText.Trim('\t').Trim('\n');
+            player.Residence = residence;
+
+            //ResidenceCountry 
+            if (!string.IsNullOrEmpty(residence))
+            {
+                var places = residence.Split(',');
+                var country = places[places.Length - 1];
+                player.ResidenceCountry = country;
+            }
+
+            //BirthPlace 
+            var birthPlaceNode = doc.DocumentNode.SelectSingleNode("//div[contains(text(), 'Birthplace')]").ParentNode.ChildNodes[3];
+            var birthPlace = birthPlaceNode.InnerText.Replace("\r", string.Empty).Replace("\n", string.Empty).Replace("\t", string.Empty);
+            player.BirthPlace = birthPlace;
+
+            //BirthCountry 
+            if (!string.IsNullOrEmpty(birthPlace))
+            {
+                var places = birthPlace.Split(',');
+                var country = places[places.Length - 1];
+                player.BirthCountry = country;
             }
 
             return player;

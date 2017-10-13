@@ -5,10 +5,13 @@ namespace atpDataMining
     {
         public string Name { get; set; }
         public int Age { get; set; }
+
+        public bool RightHanded { get; set; }
         public string Link { get; set; }
 
         public int Rank { get; set; }
-        public string Country { get; set; }
+        public string BirthPlace { get; set; }
+        public string BirthCountry { get; set; }
 
         public int Points { get; set; }
 
@@ -18,6 +21,9 @@ namespace atpDataMining
         public int Height { get; set; }
 
         public string Residence { get; set; }
+
+        public string ResidenceCountry { get; set; }
+        public long Prize { get; set; }
 
         public DateTime BirthDay { get; set; }
     }
